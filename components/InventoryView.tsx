@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import type { Category } from "@prisma/client";
 import type { SerializedItem } from "@/lib/items";
-import { CATEGORY_LABELS, CATEGORY_ORDER, getItemAlertMessage } from "@/lib/items";
+import { CATEGORY_LABELS, CATEGORY_ORDER, getItemAlertMessage, getItemAlertPriority } from "@/lib/items";
 import { AlertBanner } from "@/components/AlertBanner";
 import { ItemCard } from "@/components/ItemCard";
 import { ItemSheet } from "@/components/ItemSheet";
@@ -28,8 +28,16 @@ export function InventoryView({ items }: InventoryViewProps) {
   const [addSheetOpen, setAddSheetOpen] = useState(false);
 
   const filteredItems = useMemo(() => {
-    if (activeTab === "ALL") return items;
-    return items.filter((item) => item.category === activeTab);
+    const filtered =
+      activeTab === "ALL"
+        ? items
+        : items.filter((item) => item.category === activeTab);
+
+    return [...filtered].sort((a, b) => {
+      const priorityDiff = getItemAlertPriority(a) - getItemAlertPriority(b);
+      if (priorityDiff !== 0) return priorityDiff;
+      return a.name.localeCompare(b.name);
+    });
   }, [items, activeTab]);
 
   const alertMessages = useMemo(() => {

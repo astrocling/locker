@@ -1,4 +1,11 @@
 import type { Category, Item, Level, QuantityType } from "@prisma/client";
+import {
+  daysUntilExpiration,
+  getExpirationStatus,
+  isExpiringSoon,
+} from "@/lib/expiration";
+
+export { daysUntilExpiration, isExpiringSoon } from "@/lib/expiration";
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   MEDS: "Meds",
@@ -42,18 +49,6 @@ export function serializeItem(item: Item): SerializedItem {
   };
 }
 
-export function daysUntilExpiration(date: Date): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const exp = new Date(date);
-  exp.setHours(0, 0, 0, 0);
-  return Math.ceil((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-export function isExpiringSoon(date: Date): boolean {
-  return daysUntilExpiration(date) <= 90;
-}
-
 type ItemLike = Pick<
   Item,
   "name" | "quantityType" | "quantity" | "level" | "lowThreshold"
@@ -76,18 +71,26 @@ export function getItemAlertMessage(item: ItemLike): string | null {
     return `${item.name} is low`;
   }
   if (item.expirationDate) {
-    const exp =
-      typeof item.expirationDate === "string"
-        ? new Date(item.expirationDate)
-        : item.expirationDate;
-    if (!isExpiringSoon(exp)) return null;
-    const days = daysUntilExpiration(exp);
-    if (days < 0) {
+    const status = getExpirationStatus(item.expirationDate);
+    if (status === "none" || status === "ok") return null;
+    const days = daysUntilExpiration(item.expirationDate);
+    if (status === "expired") {
       return `${item.name} is expired`;
     }
     return `${item.name} expires in ${days} day${days === 1 ? "" : "s"}`;
   }
   return null;
+}
+
+export function getItemAlertPriority(item: ItemLike): number {
+  if (item.expirationDate) {
+    const status = getExpirationStatus(item.expirationDate);
+    if (status === "expired") return 0;
+    if (status === "urgent") return 1;
+    if (status === "soon") return 2;
+  }
+  if (isItemLow(item)) return 3;
+  return 4;
 }
 
 export type ItemFormData = {

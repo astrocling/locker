@@ -9,21 +9,25 @@ type AlertBannerProps = {
 
 const DISMISS_KEY = "locker-alert-dismissed";
 
+function getMessagesKey(messages: string[]): string {
+  return [...messages].sort().join("|");
+}
+
 export function AlertBanner({ messages }: AlertBannerProps) {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem(DISMISS_KEY) === "true") {
-      setDismissed(true);
-    }
-  }, []);
+    const key = getMessagesKey(messages);
+    const dismissedKey = sessionStorage.getItem(DISMISS_KEY);
+    setDismissed(dismissedKey === key);
+  }, [messages]);
 
   if (messages.length === 0 || dismissed) {
     return null;
   }
 
   function dismiss() {
-    sessionStorage.setItem(DISMISS_KEY, "true");
+    sessionStorage.setItem(DISMISS_KEY, getMessagesKey(messages));
     setDismissed(true);
   }
 

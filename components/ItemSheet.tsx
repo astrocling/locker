@@ -10,6 +10,7 @@ import {
   type ItemFormData,
   type SerializedItem,
 } from "@/lib/items";
+import { getExpirationStatus } from "@/lib/expiration";
 
 type ItemSheetProps =
   | { mode: "add"; item?: undefined; onClose: () => void }
@@ -39,6 +40,12 @@ function toFormData(item: SerializedItem): ItemFormData {
       : null,
     notes: item.notes,
   };
+}
+
+function getYesterdayISO(): string {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  return date.toISOString().slice(0, 10);
 }
 
 export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
@@ -117,6 +124,42 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
       setSaving(false);
     }
   }
+
+  async function handleMarkExpired() {
+    if (mode !== "edit" || !item) return;
+
+    setSaving(true);
+    setError(null);
+
+    const expirationDate = getYesterdayISO();
+
+    try {
+      const res = await fetch(`/api/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expirationDate }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to mark item as expired");
+      }
+
+      router.refresh();
+      onClose();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to mark item as expired"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const showMarkExpired =
+    mode === "edit" &&
+    form.expirationDate &&
+    getExpirationStatus(form.expirationDate) !== "expired";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
@@ -272,6 +315,16 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
               }
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
+            {showMarkExpired && (
+              <button
+                type="button"
+                onClick={handleMarkExpired}
+                disabled={saving}
+                className="mt-2 text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+              >
+                Mark as expired
+              </button>
+            )}
           </div>
 
           <div>
