@@ -16,6 +16,12 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Owner's Locker",
   description: "Track everything in the Owner's Locker between Disney World visits",
+  applicationName: "Owner's Locker",
+  appleWebApp: {
+    capable: true,
+    title: "Owner's Locker",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
