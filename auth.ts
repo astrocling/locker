@@ -1,7 +1,12 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
+const SESSION_MAX_AGE_SECONDS = 10 * 365 * 24 * 60 * 60; // 10 years
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  session: {
+    maxAge: SESSION_MAX_AGE_SECONDS,
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
