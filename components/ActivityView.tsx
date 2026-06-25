@@ -14,17 +14,17 @@ function ActivityRow({ log }: { log: SerializedActivityLog }) {
   const time = formatRelativeTime(log.createdAt);
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700"
         aria-hidden="true"
       >
         {getUserInitials(log.userName)}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-gray-900">
+        <p className="text-sm text-slate-900">
           {message}
-          <span className="text-gray-500"> · {time}</span>
+          <span className="text-slate-500"> · {time}</span>
         </p>
       </div>
     </div>
@@ -34,7 +34,7 @@ function ActivityRow({ log }: { log: SerializedActivityLog }) {
 export function ActivityView({ logs }: ActivityViewProps) {
   if (logs.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+      <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
         No activity yet — changes will appear here.
       </p>
     );

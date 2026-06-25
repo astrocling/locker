@@ -49,3 +49,47 @@ export async function updateItemQuantity(itemId: string, quantity: number) {
   revalidatePath("/restock");
   revalidatePath("/activity");
 }
+
+export async function updateItemLevel(itemId: string, level: "FULL" | "MEDIUM" | "LOW") {
+  const session = await requireAuthSession();
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  const existing = await prisma.item.findUnique({ where: { id: itemId } });
+  if (!existing) {
+    throw new Error("Item not found");
+  }
+
+  if (existing.level === level) {
+    return;
+  }
+
+  const levelLabels = { FULL: "full", MEDIUM: "medium", LOW: "low" };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.item.update({
+      where: { id: itemId },
+      data: {
+        level,
+        updatedBy: session.name,
+        updatedByEmail: session.email,
+      },
+    });
+
+    await tx.activityLog.create({
+      data: {
+        action: "UPDATED",
+        itemId: existing.id,
+        itemName: existing.name,
+        userEmail: session.email,
+        userName: session.name,
+        detail: `marked as ${levelLabels[level]}`,
+      },
+    });
+  });
+
+  revalidatePath("/inventory");
+  revalidatePath("/restock");
+  revalidatePath("/activity");
+}

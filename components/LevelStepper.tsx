@@ -2,28 +2,31 @@
 
 import { useTransition } from "react";
 import { Minus, Plus } from "lucide-react";
-import { updateItemQuantity } from "@/app/actions/items";
+import type { Level } from "@prisma/client";
+import { updateItemLevel } from "@/app/actions/items";
 
-type CountStepperProps = {
+const LEVELS: Level[] = ["LOW", "MEDIUM", "FULL"];
+
+type LevelStepperProps = {
   itemId: string;
-  quantity: number;
-  lowThreshold: number | null;
+  level: Level;
   layout?: "horizontal" | "vertical";
 };
 
-export function CountStepper({
+export function LevelStepper({
   itemId,
-  quantity,
-  lowThreshold,
-  layout = "horizontal",
-}: CountStepperProps) {
+  level,
+  layout = "vertical",
+}: LevelStepperProps) {
   const [isPending, startTransition] = useTransition();
-  const isLow = lowThreshold != null && quantity <= lowThreshold;
+  const levelIndex = LEVELS.indexOf(level);
 
   function change(delta: number) {
-    const next = Math.max(0, quantity + delta);
+    const next = LEVELS[levelIndex + delta];
+    if (!next) return;
+
     startTransition(async () => {
-      await updateItemQuantity(itemId, next);
+      await updateItemLevel(itemId, next);
     });
   }
 
@@ -38,19 +41,19 @@ export function CountStepper({
       >
         <button
           type="button"
-          disabled={isPending}
+          disabled={isPending || levelIndex >= LEVELS.length - 1}
           onClick={() => change(1)}
           className={buttonClass}
-          aria-label="Increase quantity"
+          aria-label="Increase level"
         >
           <Plus className="h-4 w-4" />
         </button>
         <button
           type="button"
-          disabled={isPending || quantity <= 0}
+          disabled={isPending || levelIndex <= 0}
           onClick={() => change(-1)}
           className={buttonClass}
-          aria-label="Decrease quantity"
+          aria-label="Decrease level"
         >
           <Minus className="h-4 w-4" />
         </button>
@@ -65,26 +68,22 @@ export function CountStepper({
     >
       <button
         type="button"
-        disabled={isPending || quantity <= 0}
+        disabled={isPending || levelIndex <= 0}
         onClick={() => change(-1)}
         className={buttonClass}
-        aria-label="Decrease quantity"
+        aria-label="Decrease level"
       >
         <Minus className="h-4 w-4" />
       </button>
-      <span
-        className={`min-w-[2ch] text-center text-lg font-semibold tabular-nums ${
-          isLow ? "text-red-600" : "text-slate-900"
-        }`}
-      >
-        {quantity}
+      <span className="min-w-[4ch] text-center text-sm font-medium capitalize text-slate-900">
+        {level.toLowerCase()}
       </span>
       <button
         type="button"
-        disabled={isPending}
+        disabled={isPending || levelIndex >= LEVELS.length - 1}
         onClick={() => change(1)}
         className={buttonClass}
-        aria-label="Increase quantity"
+        aria-label="Increase level"
       >
         <Plus className="h-4 w-4" />
       </button>

@@ -7,10 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model ItemCategory {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  colorClass String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  items      Item[]
+}
+
 model Item {
   id             String        @id @default(cuid())
   name           String
-  category       Category
+  categoryId     String?
+  category       ItemCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   quantityType   QuantityType
   quantity       Int?
   level          Level?
@@ -21,15 +31,6 @@ model Item {
   updatedByEmail String
   updatedAt      DateTime      @updatedAt
   createdAt      DateTime      @default(now())
-}
-
-enum Category {
-  MEDS
-  FOOD
-  GEAR
-  CLOTHING
-  TOILETRIES
-  OTHER
 }
 
 enum QuantityType {

@@ -1,12 +1,16 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { CATEGORY_ORDER, serializeItem } from "@/lib/items";
+import {
+  itemCategoryInclude,
+  serializeItem,
+  sortItemsByCategory,
+} from "@/lib/items";
 import { requireAuthSession } from "@/lib/session";
-import type { Category, Level, QuantityType } from "@prisma/client";
+import type { Level, QuantityType } from "@prisma/client";
 
 type CreateItemBody = {
   name: string;
-  category: Category;
+  categoryId?: string | null;
   quantityType: QuantityType;
   quantity?: number | null;
   level?: Level | null;
@@ -22,17 +26,10 @@ export async function GET() {
   }
 
   const items = await prisma.item.findMany({
-    orderBy: [{ category: "asc" }, { name: "asc" }],
+    include: itemCategoryInclude,
   });
 
-  const sorted = [...items].sort((a, b) => {
-    const catDiff =
-      CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);
-    if (catDiff !== 0) return catDiff;
-    return a.name.localeCompare(b.name);
-  });
-
-  return Response.json(sorted.map(serializeItem));
+  return Response.json(sortItemsByCategory(items.map(serializeItem)));
 }
 
 export async function POST(request: NextRequest) {
@@ -51,7 +48,7 @@ export async function POST(request: NextRequest) {
     const created = await tx.item.create({
       data: {
         name: body.name.trim(),
-        category: body.category,
+        categoryId: body.categoryId ?? null,
         quantityType: body.quantityType,
         quantity: body.quantityType === "COUNT" ? (body.quantity ?? 0) : null,
         level: body.quantityType === "LEVEL" ? (body.level ?? "FULL") : null,
@@ -64,6 +61,7 @@ export async function POST(request: NextRequest) {
         updatedBy: session.name,
         updatedByEmail: session.email,
       },
+      include: itemCategoryInclude,
     });
 
     await tx.activityLog.create({

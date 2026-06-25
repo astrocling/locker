@@ -51,6 +51,36 @@ export function getExpirationStatus(
   return "ok";
 }
 
+export function toMonthYearValue(date: Date | string | null): string {
+  if (!date) return "";
+  const parsed = parseDate(date);
+  if (!parsed) return "";
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  return `${parsed.getFullYear()}-${month}`;
+}
+
+export function fromMonthYearValue(value: string): string | null {
+  if (!value || !/^\d{4}-\d{2}$/.test(value)) return null;
+  const [yearStr, monthStr] = value.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  if (month < 1 || month > 12) return null;
+
+  const lastDay = new Date(year, month, 0);
+  const y = lastDay.getFullYear();
+  const m = String(lastDay.getMonth() + 1).padStart(2, "0");
+  const d = String(lastDay.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function formatExpirationShort(date: Date | string): string {
+  const parsed = parseDate(date);
+  if (!parsed) return "";
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const year = String(parsed.getFullYear()).slice(-2);
+  return `${month}/${year}`;
+}
+
 export function getExpirationLabel(
   status: ExpirationStatus,
   days: number
@@ -62,8 +92,8 @@ export function getExpirationLabel(
     case "expired":
       return "Expired";
     case "urgent":
-      return days === 0 ? "Expires today" : `${days}d left`;
+      return days === 0 ? "Expires today" : `Expires in ${days}d`;
     case "soon":
-      return `${days}d left`;
+      return `Expires in ${days}d`;
   }
 }

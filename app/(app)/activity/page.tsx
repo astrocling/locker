@@ -11,8 +11,8 @@ export default async function ActivityPage() {
   });
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Activity</h1>
+    <div className="px-4 pt-6">
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">Activity</h1>
       <ActivityView logs={logs.map(serializeActivityLog)} />
     </div>
   );

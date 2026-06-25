@@ -1,13 +1,13 @@
 import type { NextRequest } from "next/server";
 import { describeItemUpdate } from "@/lib/activity";
 import { prisma } from "@/lib/prisma";
-import { serializeItem } from "@/lib/items";
+import { itemCategoryInclude, serializeItem } from "@/lib/items";
 import { requireAuthSession } from "@/lib/session";
-import type { Category, Level, QuantityType } from "@prisma/client";
+import type { Level, QuantityType } from "@prisma/client";
 
 type UpdateItemBody = {
   name?: string;
-  category?: Category;
+  categoryId?: string | null;
   quantityType?: QuantityType;
   quantity?: number | null;
   level?: Level | null;
@@ -40,7 +40,7 @@ export async function PATCH(
       where: { id },
       data: {
         ...(body.name !== undefined && { name: body.name.trim() }),
-        ...(body.category !== undefined && { category: body.category }),
+        ...(body.categoryId !== undefined && { categoryId: body.categoryId }),
         ...(body.quantityType !== undefined && {
           quantityType: body.quantityType,
         }),
@@ -67,6 +67,7 @@ export async function PATCH(
         updatedBy: session.name,
         updatedByEmail: session.email,
       },
+      include: itemCategoryInclude,
     });
 
     await tx.activityLog.create({

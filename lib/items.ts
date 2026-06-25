@@ -1,4 +1,4 @@
-import type { Category, Item, Level, QuantityType } from "@prisma/client";
+import type { Item, ItemCategory, Level, QuantityType } from "@prisma/client";
 import {
   daysUntilExpiration,
   getExpirationStatus,
@@ -7,46 +7,56 @@ import {
 
 export { daysUntilExpiration, isExpiringSoon } from "@/lib/expiration";
 
-export const CATEGORY_LABELS: Record<Category, string> = {
-  MEDS: "Meds",
-  FOOD: "Food",
-  GEAR: "Gear",
-  CLOTHING: "Clothing",
-  TOILETRIES: "Toiletries",
-  OTHER: "Other",
+export type SerializedItemCategory = {
+  id: string;
+  name: string;
+  colorClass: string;
+  sortOrder: number;
 };
 
-export const CATEGORY_COLORS: Record<Category, string> = {
-  MEDS: "bg-red-100 text-red-800",
-  FOOD: "bg-orange-100 text-orange-800",
-  GEAR: "bg-blue-100 text-blue-800",
-  CLOTHING: "bg-purple-100 text-purple-800",
-  TOILETRIES: "bg-teal-100 text-teal-800",
-  OTHER: "bg-gray-100 text-gray-800",
+export type ItemWithCategory = Item & {
+  category: ItemCategory | null;
 };
 
-export const CATEGORY_ORDER: Category[] = [
-  "MEDS",
-  "FOOD",
-  "GEAR",
-  "CLOTHING",
-  "TOILETRIES",
-  "OTHER",
-];
-
-export type SerializedItem = Omit<Item, "expirationDate" | "createdAt" | "updatedAt"> & {
+export type SerializedItem = Omit<
+  Item,
+  "expirationDate" | "createdAt" | "updatedAt"
+> & {
   expirationDate: string | null;
   createdAt: string;
   updatedAt: string;
+  category: SerializedItemCategory | null;
 };
 
-export function serializeItem(item: Item): SerializedItem {
+export const itemCategoryInclude = {
+  category: true,
+} as const;
+
+export function serializeItem(item: ItemWithCategory): SerializedItem {
+  const { category, ...rest } = item;
   return {
-    ...item,
+    ...rest,
     expirationDate: item.expirationDate?.toISOString() ?? null,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
+    category: category
+      ? {
+          id: category.id,
+          name: category.name,
+          colorClass: category.colorClass,
+          sortOrder: category.sortOrder,
+        }
+      : null,
   };
+}
+
+export function sortItemsByCategory<T extends SerializedItem>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const catDiff =
+      (a.category?.sortOrder ?? 9999) - (b.category?.sortOrder ?? 9999);
+    if (catDiff !== 0) return catDiff;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 type ItemLike = Pick<
@@ -95,7 +105,7 @@ export function getItemAlertPriority(item: ItemLike): number {
 
 export type ItemFormData = {
   name: string;
-  category: Category;
+  categoryId: string | null;
   quantityType: QuantityType;
   quantity: number | null;
   level: Level | null;
