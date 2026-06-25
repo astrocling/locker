@@ -17,36 +17,41 @@ export function ItemCard({ item }: ItemCardProps) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setSheetOpen(true)}
-        className="w-full rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-shadow hover:shadow-md"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold text-gray-900">{item.name}</p>
-            <span
-              className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${CATEGORY_COLORS[item.category]}`}
-            >
-              {CATEGORY_LABELS[item.category]}
-            </span>
+      <div className="w-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          className="w-full text-left"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-gray-900">{item.name}</p>
+              <span
+                className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${CATEGORY_COLORS[item.category]}`}
+              >
+                {CATEGORY_LABELS[item.category]}
+              </span>
+            </div>
+            {item.expirationDate && (
+              <ExpirationBadge expirationDate={item.expirationDate} />
+            )}
           </div>
-          {item.expirationDate && (
-            <ExpirationBadge expirationDate={item.expirationDate} />
+          {item.quantityType === "LEVEL" && item.level && (
+            <div className="mt-3">
+              <LevelGauge level={item.level} />
+            </div>
           )}
-        </div>
-        <div className="mt-3">
-          {item.quantityType === "LEVEL" && item.level ? (
-            <LevelGauge level={item.level} />
-          ) : (
+        </button>
+        {item.quantityType === "COUNT" && (
+          <div className="mt-3">
             <CountStepper
               itemId={item.id}
               quantity={item.quantity ?? 0}
               lowThreshold={item.lowThreshold}
             />
-          )}
-        </div>
-      </button>
+          </div>
+        )}
+      </div>
       {sheetOpen && (
         <ItemSheet
           mode="edit"

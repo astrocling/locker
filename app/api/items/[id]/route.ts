@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { describeItemUpdate } from "@/lib/activity";
 import { prisma } from "@/lib/prisma";
 import { serializeItem } from "@/lib/items";
 import { requireAuthSession } from "@/lib/session";
@@ -34,37 +35,52 @@ export async function PATCH(
 
   const quantityType = body.quantityType ?? existing.quantityType;
 
-  const item = await prisma.item.update({
-    where: { id },
-    data: {
-      ...(body.name !== undefined && { name: body.name.trim() }),
-      ...(body.category !== undefined && { category: body.category }),
-      ...(body.quantityType !== undefined && {
-        quantityType: body.quantityType,
-      }),
-      quantity:
-        quantityType === "COUNT"
-          ? (body.quantity ?? existing.quantity ?? 0)
-          : null,
-      level:
-        quantityType === "LEVEL"
-          ? (body.level ?? existing.level ?? "FULL")
-          : null,
-      lowThreshold:
-        quantityType === "COUNT"
-          ? (body.lowThreshold ?? existing.lowThreshold ?? 0)
-          : null,
-      ...(body.expirationDate !== undefined && {
-        expirationDate: body.expirationDate
-          ? new Date(body.expirationDate)
-          : null,
-      }),
-      ...(body.notes !== undefined && {
-        notes: body.notes?.trim() || null,
-      }),
-      updatedBy: session.name,
-      updatedByEmail: session.email,
-    },
+  const item = await prisma.$transaction(async (tx) => {
+    const updated = await tx.item.update({
+      where: { id },
+      data: {
+        ...(body.name !== undefined && { name: body.name.trim() }),
+        ...(body.category !== undefined && { category: body.category }),
+        ...(body.quantityType !== undefined && {
+          quantityType: body.quantityType,
+        }),
+        quantity:
+          quantityType === "COUNT"
+            ? (body.quantity ?? existing.quantity ?? 0)
+            : null,
+        level:
+          quantityType === "LEVEL"
+            ? (body.level ?? existing.level ?? "FULL")
+            : null,
+        lowThreshold:
+          quantityType === "COUNT"
+            ? (body.lowThreshold ?? existing.lowThreshold ?? 0)
+            : null,
+        ...(body.expirationDate !== undefined && {
+          expirationDate: body.expirationDate
+            ? new Date(body.expirationDate)
+            : null,
+        }),
+        ...(body.notes !== undefined && {
+          notes: body.notes?.trim() || null,
+        }),
+        updatedBy: session.name,
+        updatedByEmail: session.email,
+      },
+    });
+
+    await tx.activityLog.create({
+      data: {
+        action: "UPDATED",
+        itemId: updated.id,
+        itemName: updated.name,
+        userEmail: session.email,
+        userName: session.name,
+        detail: describeItemUpdate(existing, updated),
+      },
+    });
+
+    return updated;
   });
 
   return Response.json(serializeItem(item));
@@ -86,7 +102,19 @@ export async function DELETE(
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
-  await prisma.item.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.activityLog.create({
+      data: {
+        action: "DELETED",
+        itemId: existing.id,
+        itemName: existing.name,
+        userEmail: session.email,
+        userName: session.name,
+      },
+    });
+
+    await tx.item.delete({ where: { id } });
+  });
 
   return Response.json({ success: true });
 }

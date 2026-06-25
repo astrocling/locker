@@ -47,22 +47,36 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const item = await prisma.item.create({
-    data: {
-      name: body.name.trim(),
-      category: body.category,
-      quantityType: body.quantityType,
-      quantity: body.quantityType === "COUNT" ? (body.quantity ?? 0) : null,
-      level: body.quantityType === "LEVEL" ? (body.level ?? "FULL") : null,
-      lowThreshold:
-        body.quantityType === "COUNT" ? (body.lowThreshold ?? 0) : null,
-      expirationDate: body.expirationDate
-        ? new Date(body.expirationDate)
-        : null,
-      notes: body.notes?.trim() || null,
-      updatedBy: session.name,
-      updatedByEmail: session.email,
-    },
+  const item = await prisma.$transaction(async (tx) => {
+    const created = await tx.item.create({
+      data: {
+        name: body.name.trim(),
+        category: body.category,
+        quantityType: body.quantityType,
+        quantity: body.quantityType === "COUNT" ? (body.quantity ?? 0) : null,
+        level: body.quantityType === "LEVEL" ? (body.level ?? "FULL") : null,
+        lowThreshold:
+          body.quantityType === "COUNT" ? (body.lowThreshold ?? 0) : null,
+        expirationDate: body.expirationDate
+          ? new Date(body.expirationDate)
+          : null,
+        notes: body.notes?.trim() || null,
+        updatedBy: session.name,
+        updatedByEmail: session.email,
+      },
+    });
+
+    await tx.activityLog.create({
+      data: {
+        action: "CREATED",
+        itemId: created.id,
+        itemName: created.name,
+        userEmail: session.email,
+        userName: session.name,
+      },
+    });
+
+    return created;
   });
 
   return Response.json(serializeItem(item), { status: 201 });

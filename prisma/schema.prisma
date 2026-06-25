@@ -42,3 +42,22 @@ enum Level {
   MEDIUM
   LOW
 }
+
+enum ActivityAction {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+model ActivityLog {
+  id         String         @id @default(cuid())
+  action     ActivityAction
+  itemId     String?
+  itemName   String
+  userEmail  String
+  userName   String
+  detail     String?
+  createdAt  DateTime       @default(now())
+
+  @@index([createdAt(sort: Desc)])
+}
