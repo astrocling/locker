@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Item {
+  id             String        @id @default(cuid())
+  name           String
+  category       Category
+  quantityType   QuantityType
+  quantity       Int?
+  level          Level?
+  lowThreshold   Int?
+  expirationDate DateTime?
+  notes          String?
+  updatedBy      String
+  updatedByEmail String
+  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime      @default(now())
+}
+
+enum Category {
+  MEDS
+  FOOD
+  GEAR
+  CLOTHING
+  TOILETRIES
+  OTHER
+}
+
+enum QuantityType {
+  COUNT
+  LEVEL
+}
+
+enum Level {
+  FULL
+  MEDIUM
+  LOW
+}
