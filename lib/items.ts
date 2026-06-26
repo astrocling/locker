@@ -50,11 +50,29 @@ export function serializeItem(item: ItemWithCategory): SerializedItem {
   };
 }
 
+export type InventorySortMode = "alphabetical" | "category";
+
 export function sortItemsByCategory<T extends SerializedItem>(items: T[]): T[] {
+  return sortInventoryItems(items, {
+    mode: "category",
+    prioritizeAlerts: false,
+  });
+}
+
+export function sortInventoryItems<T extends SerializedItem>(
+  items: T[],
+  options: { mode: InventorySortMode; prioritizeAlerts: boolean }
+): T[] {
   return [...items].sort((a, b) => {
-    const catDiff =
-      (a.category?.sortOrder ?? 9999) - (b.category?.sortOrder ?? 9999);
-    if (catDiff !== 0) return catDiff;
+    if (options.prioritizeAlerts) {
+      const priorityDiff = getItemAlertPriority(a) - getItemAlertPriority(b);
+      if (priorityDiff !== 0) return priorityDiff;
+    }
+    if (options.mode === "category") {
+      const catDiff =
+        (a.category?.sortOrder ?? 9999) - (b.category?.sortOrder ?? 9999);
+      if (catDiff !== 0) return catDiff;
+    }
     return a.name.localeCompare(b.name);
   });
 }
@@ -101,6 +119,10 @@ export function getItemAlertPriority(item: ItemLike): number {
   }
   if (isItemLow(item)) return 3;
   return 4;
+}
+
+export function itemNeedsAttention(item: ItemLike): boolean {
+  return getItemAlertPriority(item) < 4;
 }
 
 export type ItemFormData = {
