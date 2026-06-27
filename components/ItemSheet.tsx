@@ -20,12 +20,49 @@ const emptyForm: ItemFormData = {
   name: "",
   categoryId: null,
   quantityType: "COUNT",
-  quantity: 0,
+  quantity: null,
   level: "FULL",
-  lowThreshold: 0,
+  lowThreshold: null,
   expirationDate: null,
   notes: null,
 };
+
+const formInputClass =
+  "w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400";
+
+function blurActiveElement() {
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+}
+
+function NumericInput({
+  value,
+  onChange,
+  placeholder = "0",
+}: {
+  value: number | null;
+  onChange: (value: number | null) => void;
+  placeholder?: string;
+}) {
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={value === null ? "" : String(value)}
+      placeholder={placeholder}
+      onChange={(e) => {
+        const digits = e.target.value.replace(/\D/g, "");
+        onChange(digits === "" ? null : parseInt(digits, 10));
+      }}
+      onBlur={(e) => {
+        if (e.target.value === "") onChange(0);
+      }}
+      className={formInputClass}
+    />
+  );
+}
 
 function toFormData(item: SerializedItem): ItemFormData {
   return {
@@ -69,6 +106,11 @@ function getYearOptions(selectedYear: string): number[] {
 
 export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
   const router = useRouter();
+
+  function handleClose() {
+    blurActiveElement();
+    onClose();
+  }
   const initialMonthYear = parseMonthYear(
     item ? toMonthYearValue(item.expirationDate) || null : null
   );
@@ -139,9 +181,11 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
       name: form.name.trim(),
       categoryId: form.categoryId,
       quantityType: form.quantityType,
-      quantity: form.quantityType === "COUNT" ? form.quantity : null,
+      quantity:
+        form.quantityType === "COUNT" ? (form.quantity ?? 0) : null,
       level: form.quantityType === "LEVEL" ? form.level : null,
-      lowThreshold: form.quantityType === "COUNT" ? form.lowThreshold : null,
+      lowThreshold:
+        form.quantityType === "COUNT" ? (form.lowThreshold ?? 0) : null,
       expirationDate,
       notes: form.notes?.trim() || null,
     };
@@ -163,7 +207,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
       }
 
       router.refresh();
-      onClose();
+      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save item");
     } finally {
@@ -187,7 +231,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
         throw new Error(data.error ?? "Failed to delete item");
       }
       router.refresh();
-      onClose();
+      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete item");
     } finally {
@@ -216,7 +260,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
       }
 
       router.refresh();
-      onClose();
+      handleClose();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to mark item as expired"
@@ -242,7 +286,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
       <div
         className="absolute inset-0"
-        onClick={onClose}
+        onClick={handleClose}
         aria-hidden="true"
       />
       <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-xl">
@@ -252,7 +296,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-full p-2 text-slate-500 hover:bg-slate-100"
             aria-label="Close"
           >
@@ -269,7 +313,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+              className={formInputClass}
               placeholder="Item name"
             />
           </div>
@@ -287,7 +331,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
                 })
               }
               disabled={categoriesLoading}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 disabled:opacity-50"
+              className={`${formInputClass} disabled:opacity-50`}
             >
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -325,34 +369,20 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
                 <label className="mb-1 block text-sm font-medium text-slate-700">
                   Quantity
                 </label>
-                <input
-                  type="number"
-                  min={0}
-                  value={form.quantity ?? 0}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      quantity: parseInt(e.target.value, 10) || 0,
-                    })
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                <NumericInput
+                  value={form.quantity}
+                  onChange={(quantity) => setForm({ ...form, quantity })}
                 />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
                   Low threshold
                 </label>
-                <input
-                  type="number"
-                  min={0}
-                  value={form.lowThreshold ?? 0}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      lowThreshold: parseInt(e.target.value, 10) || 0,
-                    })
+                <NumericInput
+                  value={form.lowThreshold}
+                  onChange={(lowThreshold) =>
+                    setForm({ ...form, lowThreshold })
                   }
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
                 />
               </div>
             </div>
@@ -391,7 +421,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
               <select
                 value={expirationMonth}
                 onChange={(e) => setExpirationMonth(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                className={formInputClass}
                 aria-label="Expiration month"
               >
                 <option value="">MM</option>
@@ -407,7 +437,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
               <select
                 value={expirationYear}
                 onChange={(e) => setExpirationYear(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                className={formInputClass}
                 aria-label="Expiration year"
               >
                 <option value="">YYYY</option>
@@ -441,7 +471,7 @@ export function ItemSheet({ mode, item, onClose }: ItemSheetProps) {
                 setForm({ ...form, notes: e.target.value || null })
               }
               rows={3}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+              className={formInputClass}
               placeholder="Any extra details..."
             />
           </div>
